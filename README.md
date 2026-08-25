@@ -1,4 +1,4 @@
-# @wyre-technology/node-blackpoint
+# @wyre-ai/node-blackpoint
 
 Node.js / TypeScript client library for the [Blackpoint Cyber](https://blackpointcyber.com) **CompassOne** API.
 
@@ -14,16 +14,16 @@ CompassOne is Blackpoint's unified MDR (Managed Detection and Response) platform
 
 ## Installation
 
-This package is published to GitHub Packages under the `@wyre-technology` scope.
+This package is published to GitHub Packages under the `@wyre-ai` scope.
 
 ```bash
-npm install @wyre-technology/node-blackpoint
+npm install @wyre-ai/node-blackpoint
 ```
 
 Configure your `.npmrc` so the scope resolves to GitHub Packages:
 
 ```
-@wyre-technology:registry=https://npm.pkg.github.com
+@wyre-ai:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
 ```
 
@@ -34,7 +34,7 @@ Configure your `.npmrc` so the scope resolves to GitHub Packages:
 ## Quick Start
 
 ```ts
-import { CompassOneClient } from '@wyre-technology/node-blackpoint';
+import { CompassOneClient } from '@wyre-ai/node-blackpoint';
 
 const client = new CompassOneClient({
   apiToken: process.env.COMPASSONE_API_TOKEN!,
@@ -67,7 +67,7 @@ const vulns = await client.vulnerabilities.listVulnerabilities({ severity: ['cri
 | `apiToken`  | `string` | yes      | —                                                       | CompassOne API bearer token    |
 | `baseUrl`   | `string` | no       | `https://api.compassone.blackpointcyber.com/v1`         | API base URL                   |
 | `timeout`   | `number` | no       | `30000`                                                 | Request timeout in ms          |
-| `userAgent` | `string` | no       | `@wyre-technology/node-blackpoint`                      | User-Agent header              |
+| `userAgent` | `string` | no       | `@wyre-ai/node-blackpoint`                      | User-Agent header              |
 
 ## Resources
 
@@ -91,7 +91,7 @@ import {
   CompassOneClient,
   AuthenticationError,
   RateLimitError,
-} from '@wyre-technology/node-blackpoint';
+} from '@wyre-ai/node-blackpoint';
 
 try {
   await client.accounts.list();

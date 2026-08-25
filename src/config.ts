@@ -8,7 +8,7 @@ export interface CompassOneConfig {
 export const DEFAULT_CONFIG = {
   baseUrl: 'https://api.compassone.blackpointcyber.com/v1',
   timeout: 30000,
-  userAgent: '@wyre-technology/node-blackpoint',
+  userAgent: '@wyre-ai/node-blackpoint',
 } as const;
 
 export function validateConfig(config: CompassOneConfig): void {
