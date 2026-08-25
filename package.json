@@ -1,5 +1,5 @@
 {
-  "name": "@wyre-technology/node-blackpoint",
+  "name": "@wyre-ai/node-blackpoint",
   "version": "1.0.1",
   "description": "Node.js/TypeScript client library for the Blackpoint Cyber CompassOne API",
   "type": "module",
@@ -52,13 +52,13 @@
     "node": ">=22.0.0"
   },
   "license": "Apache-2.0",
-  "homepage": "https://github.com/wyre-technology/node-blackpoint#readme",
+  "homepage": "https://github.com/WYRE-AI/node-blackpoint#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wyre-technology/node-blackpoint.git"
+    "url": "https://github.com/WYRE-AI/node-blackpoint.git"
   },
   "bugs": {
-    "url": "https://github.com/wyre-technology/node-blackpoint/issues"
+    "url": "https://github.com/WYRE-AI/node-blackpoint/issues"
   },
   "keywords": [
     "blackpoint",
