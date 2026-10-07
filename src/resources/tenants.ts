@@ -6,12 +6,12 @@ export class TenantsResource {
   constructor(private readonly httpClient: HttpClient) {}
 
   async list(params?: TenantListParams): Promise<PaginatedResponse<Tenant>> {
-    return this.httpClient.request<PaginatedResponse<Tenant>>('/tenants/', {
-      params,
+    return this.httpClient.request<PaginatedResponse<Tenant>>('/tenants', {
+      ...(params ? { params } : {}),
     });
   }
 
   async get(id: string): Promise<Tenant> {
-    return this.httpClient.request<Tenant>(`/tenants/${id}/`);
+    return this.httpClient.request<Tenant>(`/tenants/${encodeURIComponent(id)}`);
   }
 }

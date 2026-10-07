@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": "ag-1",
+      "status": "OPEN",
+      "alertCount": 2,
+      "hostname": "host-a",
+      "username": "ada"
+    }
+  ],
+  "meta": {
+    "skip": 0,
+    "take": 50,
+    "totalItems": 80
+  }
+}

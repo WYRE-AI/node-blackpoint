@@ -1,0 +1,8 @@
+{
+  "message": "x-tenant-id header is required",
+  "errors": {
+    "class": "class is required"
+  },
+  "authorization": "Bearer super-secret-token-value",
+  "echo": "token was super-secret-token-value"
+}

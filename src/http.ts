@@ -1,10 +1,10 @@
-import { CompassOneConfig, DEFAULT_CONFIG } from './config.js';
+import { CompassOneConfig, DEFAULT_CONFIG, resolveBaseUrl } from './config.js';
 import { RateLimiter } from './rate-limiter.js';
-import { buildQueryString, normalizePath } from './pagination.js';
+import { applyPaginationMeta, buildQueryString, normalizePath } from './pagination.js';
 import {
   ServiceError,
   AuthenticationError,
-  ForbiddenError,
+  NotEntitledError,
   NotFoundError,
   ValidationError,
   RateLimitError,
@@ -17,6 +17,19 @@ export interface RequestOptions {
   params?: Record<string, unknown>;
   headers?: Record<string, string>;
   timeout?: number;
+  /**
+   * Tenant id sent as `x-tenant-id`. When set, `tenantId` is removed from the
+   * query string so it is not also sent as a parameter.
+   */
+  tenantId?: string;
+  /**
+   * Set on routes whose HTTP path could not be confirmed. A 403 or 404 is
+   * still thrown as NotEntitledError / NotFoundError, with this note prefixed
+   * so the failure is not an opaque status.
+   */
+  pathNote?: string;
+  /** Internal: one automatic retry after Retry-After has already run. */
+  rateLimitRetried?: boolean;
 }
 
 export class HttpClient {
@@ -25,40 +38,56 @@ export class HttpClient {
 
   constructor(config: CompassOneConfig) {
     this.config = {
-      ...DEFAULT_CONFIG,
-      ...config,
+      apiToken: config.apiToken,
+      baseUrl: resolveBaseUrl(config.baseUrl),
+      timeout: config.timeout ?? DEFAULT_CONFIG.timeout,
+      userAgent: config.userAgent ?? DEFAULT_CONFIG.userAgent,
     };
 
-    // Conservative rate limit: 60 requests per minute (1 per second)
-    this.rateLimiter = new RateLimiter(60, 1);
+    this.rateLimiter = new RateLimiter();
   }
 
-  async request<T>(
-    endpoint: string,
-    options: RequestOptions = {}
-  ): Promise<T> {
+  async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     await this.rateLimiter.acquire();
 
-    const url = this.buildUrl(endpoint, options.params);
+    const method = options.method ?? 'GET';
+    const params = this.queryParams(options);
+    const url = this.buildUrl(endpoint, params);
+    const path = this.requestPath(url);
     const requestOptions: RequestInit = {
-      method: options.method || 'GET',
-      headers: this.buildHeaders(options.headers),
-      signal: AbortSignal.timeout(options.timeout || this.config.timeout),
+      method,
+      headers: this.buildHeaders(options.headers, options.tenantId),
+      signal: AbortSignal.timeout(options.timeout ?? this.config.timeout),
     };
 
-    if (options.body && options.method !== 'GET') {
+    if (options.body !== undefined && method !== 'GET') {
       requestOptions.body = JSON.stringify(options.body);
     }
 
     try {
       const response = await fetch(url, requestOptions);
-      return await this.handleResponse<T>(response);
+      return await this.handleResponse<T>(response, path, method, endpoint, options);
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new ServiceError('Request timeout', 408, null);
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+        throw new ServiceError('Request timeout', 408, null, path, method, this.config.apiToken);
       }
       throw error;
     }
+  }
+
+  private queryParams(options: RequestOptions): Record<string, unknown> | undefined {
+    if (!options.params) {
+      return undefined;
+    }
+    if (!options.tenantId || !Object.prototype.hasOwnProperty.call(options.params, 'tenantId')) {
+      return options.params;
+    }
+    const rest = { ...options.params };
+    delete rest.tenantId;
+    return rest;
   }
 
   private buildUrl(endpoint: string, params?: Record<string, unknown>): string {
@@ -66,76 +95,106 @@ export class HttpClient {
     const baseUrl = this.config.baseUrl.endsWith('/')
       ? this.config.baseUrl.slice(0, -1)
       : this.config.baseUrl;
-
     const url = `${baseUrl}${normalizedEndpoint}`;
     const queryString = params ? buildQueryString(params) : '';
-
     return `${url}${queryString}`;
   }
 
-  private buildHeaders(additionalHeaders?: Record<string, string>): Record<string, string> {
-    return {
-      'Authorization': `Bearer ${this.config.apiToken}`,
+  private requestPath(url: string): string {
+    const parsed = new URL(url);
+    return `${parsed.pathname}${parsed.search}`;
+  }
+
+  private buildHeaders(
+    additionalHeaders?: Record<string, string>,
+    tenantId?: string
+  ): Record<string, string> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.config.apiToken}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       'User-Agent': this.config.userAgent,
       ...additionalHeaders,
     };
+
+    if (tenantId) {
+      headers['x-tenant-id'] = tenantId;
+    }
+
+    return headers;
   }
 
-  // CRITICAL: Read body as text first, then parse JSON to avoid "Body already read" error
-  private async handleResponse<T>(response: Response): Promise<T> {
+  private async handleResponse<T>(
+    response: Response,
+    path: string,
+    method: string,
+    endpoint: string,
+    options: RequestOptions
+  ): Promise<T> {
     if (response.ok) {
       if (response.status === 204) {
         return {} as T;
       }
 
-      const contentType = response.headers.get('content-type') || '';
+      const contentType = response.headers.get('content-type') ?? '';
       if (contentType.includes('application/json')) {
         try {
-          return await response.json() as T;
-        } catch (error) {
-          throw new ServiceError('Invalid JSON response', response.status, null);
+          const parsed = await response.json() as T;
+          return applyPaginationMeta(parsed);
+        } catch {
+          throw new ServiceError(
+            'Invalid JSON response',
+            response.status,
+            null,
+            path,
+            method,
+            this.config.apiToken
+          );
         }
       }
 
       return {} as T;
     }
 
-    // SAFE: Read text once, then try JSON.parse
     let responseBody: unknown;
     const rawText = await response.text();
     try {
-      responseBody = JSON.parse(rawText);
+      responseBody = rawText.length > 0 ? JSON.parse(rawText) : null;
     } catch {
       responseBody = rawText;
     }
 
-    const message = this.extractErrorMessage(responseBody) || response.statusText || 'Unknown error';
+    const serverMessage = this.extractErrorMessage(responseBody) || response.statusText || 'Unknown error';
+    const message = options.pathNote
+      ? `${options.pathNote} ${serverMessage}`
+      : serverMessage;
+    const secret = this.config.apiToken;
 
     switch (response.status) {
       case 401:
-        throw new AuthenticationError(message, responseBody);
+        throw new AuthenticationError(message, responseBody, path, method, secret);
       case 403:
-        throw new ForbiddenError(message, responseBody);
+        throw new NotEntitledError(message, responseBody, path, method, secret);
       case 404:
-        throw new NotFoundError(message, responseBody);
-      case 400:
+        throw new NotFoundError(message, responseBody, path, method, secret);
+      case 400: {
         const errors = this.extractValidationErrors(responseBody);
-        throw new ValidationError(message, errors, responseBody);
-      case 429:
+        throw new ValidationError(message, errors, responseBody, path, method, secret);
+      }
+      case 429: {
         const retryAfter = this.extractRetryAfter(response);
-        if (retryAfter > 0) {
-          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-          // Retry once after rate limit delay
-          return this.request(response.url.replace(this.config.baseUrl, ''));
+        if (retryAfter.retry && !options.rateLimitRetried) {
+          await new Promise(resolve => setTimeout(resolve, retryAfter.seconds * 1000));
+          return this.request(endpoint, { ...options, rateLimitRetried: true });
         }
-        throw new RateLimitError(message, retryAfter, responseBody);
-      default:
+        throw new RateLimitError(message, retryAfter.seconds, responseBody, path, method, secret);
+      }
+      default: {
         if (response.status >= 500) {
-          throw new ServerError(message, response.status, responseBody);
+          throw new ServerError(message, response.status, responseBody, path, method, secret);
         }
-        throw new ServiceError(message, response.status, responseBody);
+        throw new ServiceError(message, response.status, responseBody, path, method, secret);
+      }
     }
   }
 
@@ -146,7 +205,8 @@ export class HttpClient {
 
     if (typeof responseBody === 'object' && responseBody !== null) {
       const obj = responseBody as Record<string, unknown>;
-      return (obj.message || obj.error || obj.detail) as string;
+      const message = obj.message ?? obj.error ?? obj.detail;
+      return typeof message === 'string' ? message : null;
     }
 
     return null;
@@ -156,10 +216,10 @@ export class HttpClient {
     if (typeof responseBody === 'object' && responseBody !== null) {
       const obj = responseBody as Record<string, unknown>;
       if (Array.isArray(obj.errors)) {
-        return obj.errors;
+        return obj.errors as Array<{ field: string; message: string }>;
       }
       if (obj.errors && typeof obj.errors === 'object') {
-        return Object.entries(obj.errors).map(([field, message]) => ({
+        return Object.entries(obj.errors as Record<string, unknown>).map(([field, message]) => ({
           field,
           message: String(message),
         }));
@@ -168,12 +228,15 @@ export class HttpClient {
     return [];
   }
 
-  private extractRetryAfter(response: Response): number {
+  private extractRetryAfter(response: Response): { seconds: number; retry: boolean } {
     const retryAfter = response.headers.get('Retry-After');
-    if (retryAfter) {
-      const seconds = parseInt(retryAfter, 10);
-      return isNaN(seconds) ? 60 : seconds;
+    if (!retryAfter) {
+      return { seconds: 60, retry: false };
     }
-    return 60; // Default 1 minute backoff
+    const seconds = parseInt(retryAfter, 10);
+    if (Number.isNaN(seconds)) {
+      return { seconds: 60, retry: false };
+    }
+    return { seconds, retry: seconds > 0 };
   }
 }

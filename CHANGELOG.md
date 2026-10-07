@@ -1,3 +1,22 @@
+## [1.1.0](https://github.com/WYRE-AI/node-blackpoint/compare/v1.0.2...v1.1.0) (2026-10-07)
+
+### Bug Fixes
+
+* **api:** default base URL is `https://api.blackpointcyber.com/v1`. A base URL with or without `/v1` is accepted and `/v1` is not doubled. Request paths no longer force a trailing slash (the published OpenAPI paths have none, and the live `GET /v1/accounts` and `GET /v1/tenants` calls do not use one).
+* **tenancy:** tenant-scoped asset and alert-group calls send `x-tenant-id`. `tenantId` is not also sent as a query parameter on those routes. Cloud onboarding keeps `tenantId` as a query parameter, matching the published OpenAPI.
+* **assets:** `class` is required and must be a documented CompassOne class (`CONTAINER`, `DEVICE`, `FRAMEWORK`, `NETSTAT`, `PERSON`, `PROCESS`, `SERVICE`, `SOFTWARE`, `SOURCE`, `SURVEY`, `USER`). `CLOUD` is not in that enum. Relationship direction is `in` or `out`, and the far-side class is sent as `entityClass`.
+* **detections:** `GET /detections` is 404. Lists and gets go to `GET /alert-groups`, paged with `skip`/`take`. `client.detections` remains as a deprecated alias (`page`/`pageSize` convert to `skip`/`take`; `fromDate` is sent as `since`).
+* **vulnerabilities:** `GET /vulnerabilities` and `GET /scans` replace `/vm-vulnerabilities` (those paths returned 403 on 2026-10-07, so they exist; a non-entitled key throws `NotEntitledError`). `/vm-darkweb` and `/vm-external` are marked unconfirmed — they are not in compassone-sdk 0.0.60 and `/vm-darkweb` returned 404 — and throw `NotFoundError` or `NotEntitledError` with status, path, and body.
+* **errors:** failures carry HTTP status, method, path, and response body. `toJSON()` redacts the bearer token and any `Authorization` field so `JSON.stringify(error)` is not `{}`.
+* **pagination:** `meta.currentPage`, `meta.totalItems`, `meta.pageSize`, and `meta.totalPages` are copied onto `pagination`. Skip/take metadata is copied when that is what the route returns.
+* **contact-groups:** `GET /contact-groups` is 404. The published path is `GET /accounts/{accountId}/contact-groups`.
+* **cloud:** `GET /cloud-mdr` is 404. Google and Cisco lists use `/cloud/google/onboardings` and `/cloud/cisco/onboardings`. There is no list-all M365 route; published reads are `/cloud/ms365/connections/{connectionId}`.
+* **rate limit:** the local token bucket matches the key quota of 2000 requests / 15 minutes.
+
+### Features
+
+* add `client.alertGroups` and `NotEntitledError` (a 403, and a subclass of `ForbiddenError`).
+
 ## [1.0.2](https://github.com/WYRE-AI/node-blackpoint/compare/v1.0.1...v1.0.2) (2026-08-25)
 
 

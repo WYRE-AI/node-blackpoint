@@ -16,8 +16,17 @@ export interface ContactGroup extends BaseEntity {
   enabled: boolean;
 }
 
+/**
+ * Contact groups are account-scoped: `GET /accounts/{accountId}/contact-groups`.
+ * `GET /contact-groups` returns 404.
+ */
 export interface ContactGroupListParams extends ListParams {
+  accountId: string;
   tenantId?: string;
   enabled?: boolean;
   sortBy?: 'id' | 'name' | 'created' | 'updated';
+}
+
+export interface ContactGroupGetParams {
+  accountId: string;
 }

@@ -1,6 +1,6 @@
 {
   "name": "@wyre-ai/node-blackpoint",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Node.js/TypeScript client library for the Blackpoint Cyber CompassOne API",
   "type": "module",
   "main": "./dist/index.cjs",
