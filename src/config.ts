@@ -32,6 +32,7 @@ export function validateConfig(config: CompassOneConfig): void {
  * Normalize a CompassOne base URL.
  * `https://api.blackpointcyber.com` and `https://api.blackpointcyber.com/v1`
  * both become `https://api.blackpointcyber.com/v1`. A `/v1` suffix is not doubled.
+ * The scheme must be `https`, except `http` on localhost, `127.0.0.1`, or `[::1]`.
  */
 export function resolveBaseUrl(input?: string): string {
   const trimmed = input?.trim() ?? '';
@@ -42,6 +43,13 @@ export function resolveBaseUrl(input?: string): string {
     url = new URL(raw);
   } catch {
     throw new Error(`Invalid base URL: ${raw}`);
+  }
+
+  const loopback = url.hostname === 'localhost'
+    || url.hostname === '127.0.0.1'
+    || url.hostname === '[::1]';
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) {
+    throw new Error('Base URL must use https');
   }
 
   const pathname = url.pathname.replace(/\/+$/, '');

@@ -183,8 +183,10 @@ export class HttpClient {
       }
       case 429: {
         const retryAfter = this.extractRetryAfter(response);
-        if (retryAfter.retry && !options.rateLimitRetried) {
-          await new Promise(resolve => setTimeout(resolve, retryAfter.seconds * 1000));
+        const timeoutMs = options.timeout ?? this.config.timeout;
+        const waitMs = retryAfter.seconds * 1000;
+        if (retryAfter.retry && !options.rateLimitRetried && waitMs <= timeoutMs) {
+          await new Promise(resolve => setTimeout(resolve, waitMs));
           return this.request(endpoint, { ...options, rateLimitRetried: true });
         }
         throw new RateLimitError(message, retryAfter.seconds, responseBody, path, method, secret);

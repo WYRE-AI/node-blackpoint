@@ -28,5 +28,6 @@ export interface ContactGroupListParams extends ListParams {
 }
 
 export interface ContactGroupGetParams {
+  /** Account that owns the contact group. */
   accountId: string;
 }

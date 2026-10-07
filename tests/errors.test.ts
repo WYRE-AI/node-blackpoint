@@ -21,9 +21,11 @@ describe('redactSensitive', () => {
     expect(JSON.stringify(redacted)).not.toContain(TOKEN);
   });
 
-  it('leaves short secrets and non-strings alone', () => {
-    expect(redactSensitive('abc', 'ab')).toBe('abc');
+  it('redacts short secrets and leaves non-strings and empty secrets alone', () => {
+    expect(redactSensitive('abc', 'ab')).toBe('[REDACTED]c');
+    expect(redactSensitive({ echo: 'ab' }, 'ab')).toEqual({ echo: '[REDACTED]' });
     expect(redactSensitive(12, TOKEN)).toBe(12);
+    expect(redactSensitive('abc', '')).toBe('abc');
   });
 });
 

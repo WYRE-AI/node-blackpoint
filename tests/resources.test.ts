@@ -170,6 +170,12 @@ describe('CompassOneClient resources', () => {
     expect(parsedUrl(lastRequest(fetchMock)).searchParams.get('skip')).toBe('0');
     expect(parsedUrl(lastRequest(fetchMock)).searchParams.has('status')).toBe(false);
 
+    await api.detections.list({ tenantId: 'tenant-1', page: 0, pageSize: 100 });
+    expect(parsedUrl(lastRequest(fetchMock)).searchParams.get('skip')).toBe('0');
+
+    await api.detections.list({ tenantId: 'tenant-1', skip: -5, take: 5 });
+    expect(parsedUrl(lastRequest(fetchMock)).searchParams.get('skip')).toBe('-5');
+
     await api.detections.list({ tenantId: 'tenant-1', status: ['resolved'], skip: 5, take: 5 });
     expect(parsedUrl(lastRequest(fetchMock)).searchParams.get('status')).toBe('RESOLVED');
     expect(parsedUrl(lastRequest(fetchMock)).searchParams.get('skip')).toBe('5');

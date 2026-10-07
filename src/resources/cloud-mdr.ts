@@ -75,7 +75,7 @@ export class CloudMdrResource {
    * (published OpenAPI). It is not the `x-tenant-id` header.
    */
   async listGoogleOnboardings(
-    params: CloudOnboardingListParams
+    params: CloudOnboardingListParams & { tenantId: string }
   ): Promise<PaginatedResponse<GoogleOnboarding>> {
     const path = '/cloud/google/onboardings';
     if (!params?.tenantId) {
@@ -97,7 +97,7 @@ export class CloudMdrResource {
    * `GET /cloud/cisco/onboardings?tenantId=`. Tenant id stays a query parameter.
    */
   async listCiscoOnboardings(
-    params: CloudOnboardingListParams
+    params: CloudOnboardingListParams & { tenantId: string }
   ): Promise<PaginatedResponse<CiscoOnboarding>> {
     const path = '/cloud/cisco/onboardings';
     if (!params?.tenantId) {

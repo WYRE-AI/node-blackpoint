@@ -11,7 +11,9 @@
 * **pagination:** `meta.currentPage`, `meta.totalItems`, `meta.pageSize`, and `meta.totalPages` are copied onto `pagination`. Skip/take metadata is copied when that is what the route returns.
 * **contact-groups:** `GET /contact-groups` is 404. The published path is `GET /accounts/{accountId}/contact-groups`.
 * **cloud:** `GET /cloud-mdr` is 404. Google and Cisco lists use `/cloud/google/onboardings` and `/cloud/cisco/onboardings`. There is no list-all M365 route; published reads are `/cloud/ms365/connections/{connectionId}`.
-* **rate limit:** the local token bucket matches the key quota of 2000 requests / 15 minutes.
+* **rate limit:** the local token bucket matches the key quota of 2000 requests / 15 minutes. A `Retry-After` longer than the request timeout throws `RateLimitError` immediately.
+* **config:** `resolveBaseUrl` accepts only `https`, plus `http` on `localhost`, `127.0.0.1`, and `[::1]`.
+* **errors:** token redaction no longer skips secrets shorter than 8 characters. An empty secret is left unchanged.
 
 ### Features
 

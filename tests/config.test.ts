@@ -31,6 +31,17 @@ describe('resolveBaseUrl', () => {
   it('rejects a base URL that is not a URL', () => {
     expect(() => resolveBaseUrl('not a url')).toThrow(/Invalid base URL/);
   });
+
+  it('rejects non-https hosts that are not loopback', () => {
+    expect(() => resolveBaseUrl('http://evil.example')).toThrow(/https/);
+    expect(() => resolveBaseUrl('http://api.blackpointcyber.com')).toThrow(/https/);
+  });
+
+  it('allows http only for loopback and still appends /v1', () => {
+    expect(resolveBaseUrl('http://localhost:9')).toBe('http://localhost:9/v1');
+    expect(resolveBaseUrl('http://127.0.0.1')).toBe('http://127.0.0.1/v1');
+    expect(resolveBaseUrl('http://[::1]:9')).toBe('http://[::1]:9/v1');
+  });
 });
 
 describe('validateConfig', () => {

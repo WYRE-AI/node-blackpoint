@@ -7,13 +7,11 @@ export interface ServiceErrorBody {
   body: unknown;
 }
 
-const MIN_SECRET_LENGTH = 8;
-
 /** Remove bearer tokens and `Authorization` values before an error is logged or thrown. */
 export function redactSensitive(value: unknown, secret?: string): unknown {
   const scrub = (text: string): string => {
     let out = text.replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]');
-    if (secret && secret.length >= MIN_SECRET_LENGTH && out.includes(secret)) {
+    if (secret && out.includes(secret)) {
       out = out.split(secret).join('[REDACTED]');
     }
     return out;

@@ -164,6 +164,14 @@ describe('HttpClient', () => {
     expect(calls).toBe(2);
   });
 
+  it('does not retry when Retry-After is longer than the request timeout', async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ message: 'slow' }, 429, { 'Retry-After': '3600' }));
+    const limited = await client().request('/accounts', { timeout: 1000 }).catch(error => error) as RateLimitError;
+    expect(limited).toBeInstanceOf(RateLimitError);
+    expect(limited.retryAfter).toBe(3600);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does not retry when Retry-After is zero or the header is not numeric', async () => {
     mockFetch(() => jsonResponse({ message: 'slow' }, 429, { 'Retry-After': '0' }));
     const limited = await client().request('/accounts').catch(error => error) as RateLimitError;

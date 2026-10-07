@@ -30,7 +30,7 @@ function mapLegacyStatus(status: DetectionListParams['status']): AlertGroupListP
 function toAlertGroupParams(params?: DetectionListParams): AlertGroupListParams {
   const take = params?.take ?? params?.pageSize;
   const skip = params?.skip ?? (
-    params?.page !== undefined ? (params.page - 1) * (take ?? 100) : undefined
+    params?.page !== undefined ? Math.max(0, params.page - 1) * (take ?? 100) : undefined
   );
   const status = mapLegacyStatus(params?.status);
   return {
