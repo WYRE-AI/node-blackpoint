@@ -1,5 +1,5 @@
 import { PaginatedResponse } from '../pagination.js';
-import type { AlertGroupListParams, AlertGroupStatus } from '../types/alert-groups.js';
+import type { AlertGroupGetParams, AlertGroupListParams, AlertGroupStatus } from '../types/alert-groups.js';
 import type { Detection, DetectionListParams } from '../types/detections.js';
 import { AlertGroupsResource } from './alert-groups.js';
 
@@ -61,8 +61,8 @@ export class DetectionsResource {
   /**
    * @deprecated Use `client.alertGroups.get`. `tenantId` is required (`x-tenant-id`).
    */
-  async get(id: string, params?: { tenantId?: string }): Promise<Detection> {
-    const group = await this.alertGroups.get(id, { tenantId: params?.tenantId ?? '' });
+  async get(id: string, params: AlertGroupGetParams): Promise<Detection> {
+    const group = await this.alertGroups.get(id, params);
     return group as Detection;
   }
 }
