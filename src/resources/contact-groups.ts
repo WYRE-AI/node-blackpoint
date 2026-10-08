@@ -30,8 +30,12 @@ export class ContactGroupsResource {
   }
 
   /**
-   * `GET /accounts/{accountId}/contact-groups/{id}`.
-   * Throws `ValidationError` when `accountId` is missing.
+   * One contact group: `GET /accounts/{accountId}/contact-groups/{id}`.
+   *
+   * @param id Contact group id.
+   * @param params Account scope. `accountId` is required.
+   * @throws {ValidationError} When `params.accountId` is missing or empty.
+   *   No request is sent.
    */
   async get(id: string, params: ContactGroupGetParams): Promise<ContactGroup> {
     const accountId = params?.accountId;

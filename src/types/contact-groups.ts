@@ -28,6 +28,11 @@ export interface ContactGroupListParams extends ListParams {
 }
 
 export interface ContactGroupGetParams {
-  /** Account that owns the contact group. */
+  /**
+   * Account that owns the contact group. Required: the route is
+   * `/accounts/{accountId}/contact-groups/{id}`, and `contactGroups.get`
+   * throws `ValidationError` (field `accountId`) before any request when it
+   * is missing or empty.
+   */
   accountId: string;
 }

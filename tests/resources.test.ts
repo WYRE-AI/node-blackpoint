@@ -156,7 +156,6 @@ describe('CompassOneClient resources', () => {
       status: ['new', 'resolved'],
       fromDate: '2026-09-01T00:00:00Z',
       search: 'host',
-      severity: ['high'],
     });
     const aliased = parsedUrl(lastRequest(fetchMock));
     expect(aliased.pathname).toBe('/v1/alert-groups');
@@ -180,8 +179,22 @@ describe('CompassOneClient resources', () => {
     expect(parsedUrl(lastRequest(fetchMock)).searchParams.get('status')).toBe('RESOLVED');
     expect(parsedUrl(lastRequest(fetchMock)).searchParams.get('skip')).toBe('5');
 
-    await api.detections.list({ tenantId: 'tenant-1', status: ['false_positive'] });
-    expect(parsedUrl(lastRequest(fetchMock)).searchParams.has('status')).toBe(false);
+    const callsBefore = fetchMock.mock.calls.length;
+    await expect(
+      api.detections.list({ tenantId: 'tenant-1', status: ['false_positive'] }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    for (const filter of [
+      { assetId: 'asset-1' },
+      { severity: ['high'] },
+      { ruleId: ['rule-1'] },
+      { source: ['edr'] },
+      { toDate: '2026-09-30T00:00:00Z' },
+    ]) {
+      await expect(
+        api.detections.list({ tenantId: 'tenant-1', ...filter }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    }
+    expect(fetchMock.mock.calls.length).toBe(callsBefore);
 
     await expect(api.detections.get('ag-1')).rejects.toBeInstanceOf(ValidationError);
     await api.detections.get('ag-1', { tenantId: 'tenant-1' });
