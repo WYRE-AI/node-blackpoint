@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": "tenant-1",
+      "accountId": "acct-1",
+      "name": "Acme",
+      "status": "active"
+    }
+  ],
+  "meta": {
+    "currentPage": 1,
+    "totalItems": 3,
+    "pageSize": 1,
+    "totalPages": 3
+  }
+}

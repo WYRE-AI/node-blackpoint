@@ -1,14 +1,22 @@
+import { RATE_LIMIT_CAPACITY, RATE_LIMIT_REFILL_PER_SECOND } from './config.js';
+
 interface TokenBucket {
   tokens: number;
   lastRefill: number;
   capacity: number;
-  refillRate: number; // tokens per second
+  refillRate: number;
 }
 
+/**
+ * Token bucket sized to the CompassOne key quota (2000 requests / 15 minutes).
+ */
 export class RateLimiter {
   private bucket: TokenBucket;
 
-  constructor(capacity: number = 60, refillRate: number = 1) {
+  constructor(
+    capacity: number = RATE_LIMIT_CAPACITY,
+    refillRate: number = RATE_LIMIT_REFILL_PER_SECOND
+  ) {
     this.bucket = {
       tokens: capacity,
       lastRefill: Date.now(),
@@ -25,22 +33,27 @@ export class RateLimiter {
       return;
     }
 
-    // Wait for tokens to refill
-    const tokensNeeded = tokens - this.bucket.tokens;
-    const waitTime = Math.ceil(tokensNeeded / this.bucket.refillRate) * 1000;
+    if (this.bucket.refillRate <= 0) {
+      throw new Error('Rate limiter refill rate must be positive');
+    }
 
-    await new Promise(resolve => setTimeout(resolve, waitTime));
+    const tokensNeeded = tokens - this.bucket.tokens;
+    const waitMs = Math.max(1, Math.ceil((tokensNeeded / this.bucket.refillRate) * 1000));
+
+    await new Promise(resolve => setTimeout(resolve, waitMs));
     return this.acquire(tokens);
   }
 
   private refill(): void {
     const now = Date.now();
     const timePassed = (now - this.bucket.lastRefill) / 1000;
-    const tokensToAdd = Math.floor(timePassed * this.bucket.refillRate);
+    if (timePassed <= 0) {
+      return;
+    }
 
     this.bucket.tokens = Math.min(
       this.bucket.capacity,
-      this.bucket.tokens + tokensToAdd
+      this.bucket.tokens + timePassed * this.bucket.refillRate
     );
     this.bucket.lastRefill = now;
   }

@@ -1,13 +1,50 @@
 import type { BaseEntity, ListParams } from './common.js';
 
-export type AssetClass = 'endpoint' | 'server' | 'network' | 'cloud' | 'mobile' | 'iot';
-export type AssetRelationshipDirection = 'parent' | 'child' | 'sibling';
+/**
+ * Asset classes documented for CompassOne inventory list.
+ * Source: CompassOne asset-list contract (class filter is required).
+ * `CLOUD` is not in that enum.
+ */
+export const ASSET_CLASSES = [
+  'CONTAINER',
+  'DEVICE',
+  'FRAMEWORK',
+  'NETSTAT',
+  'PERSON',
+  'PROCESS',
+  'SERVICE',
+  'SOFTWARE',
+  'SOURCE',
+  'SURVEY',
+  'USER',
+] as const;
+
+export type AssetClass = (typeof ASSET_CLASSES)[number];
+
+/**
+ * Far-side classes accepted by the asset relationship read.
+ * Includes finding types that are not valid on the asset list itself.
+ */
+export const RELATIONSHIP_ENTITY_CLASSES = [
+  ...ASSET_CLASSES,
+  'ALERT',
+  'ALERTGROUP',
+  'EVENT',
+  'INCIDENT',
+  'VULNERABILITY',
+] as const;
+
+export type RelationshipEntityClass = (typeof RELATIONSHIP_ENTITY_CLASSES)[number];
+
+/** `out` = this asset points at the entity. `in` = the entity points at this asset. */
+export type AssetRelationshipDirection = 'in' | 'out';
+
 export type AssetStatus = 'active' | 'inactive' | 'decommissioned';
 
 export interface Asset extends BaseEntity {
   accountId: string;
   tenantId: string;
-  assetClass: AssetClass;
+  assetClass: AssetClass | string;
   classification?: string;
   criticality?: string;
   description?: string;
@@ -29,7 +66,10 @@ export interface Asset extends BaseEntity {
 }
 
 export interface AssetListParams extends ListParams {
-  class: AssetClass;
+  /** Required. Sent as the repeated-or-comma `class` query parameter. */
+  class: AssetClass | AssetClass[];
+  /** Required. Sent as the `x-tenant-id` header, not as a query parameter. */
+  tenantId: string;
   withDeleted?: boolean;
   sources?: string[];
   platform?: string[];
@@ -66,6 +106,10 @@ export interface AssetListParams extends ListParams {
     | 'lastLoginOn';
 }
 
+export interface AssetGetParams {
+  tenantId: string;
+}
+
 export interface AssetRelationship extends BaseEntity {
   sourceAssetId: string;
   targetAssetId: string;
@@ -74,8 +118,9 @@ export interface AssetRelationship extends BaseEntity {
 }
 
 export interface AssetRelationshipListParams extends ListParams {
-  class: AssetClass;
+  class: RelationshipEntityClass;
   direction: AssetRelationshipDirection;
+  tenantId: string;
   withDeleted?: boolean;
-  sortBy?: 'createdOn';
+  sortBy?: 'createdOn' | 'created_on';
 }
